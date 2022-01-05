@@ -1,0 +1,4 @@
+username=serviceaccount
+password=MYpassword!
+hostname=hostlab.go4labs.net
+location=/Users/eran/Documents/projects/restAPI/results
