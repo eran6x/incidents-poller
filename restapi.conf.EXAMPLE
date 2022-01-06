@@ -1,4 +1,10 @@
+#########################################
+# configuration file
+#########################################
 username=serviceaccount
 password=MYpassword!
 hostname=hostlab.go4labs.net
 location=/Users/eran/Documents/projects/restAPI/results
+incident_type=INCIDENTS
+verifycert=False
+start_date=01/01/2022
