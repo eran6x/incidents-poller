@@ -3,6 +3,7 @@ import time
 import logging
 import requests
 from datetime import datetime
+import pprint
 
 __author__ = 'Eran Amir 2022'
 
@@ -14,18 +15,15 @@ __author__ = 'Eran Amir 2022'
 #
 ################################
 def read_config(configfile):
-    # Using readlines()
     file1 = open(configfile, 'r')
     Lines = file1.readlines()
 
-    count = 0
-    # Strips the newline character
     for line in Lines:
-        count += 1
+        if ( line.startswith('#') or line.startswith('\n') ) :
+            continue
         line0 = line.split('=')[0]
         line1 = (line.split('=')[1])
         line1 = line1. rstrip("\n")
-        #print("Line{}: arg0= {} arg 1= {}".format(count, line0,line1))
 
         if line0.lower() in ['hostname', 'Hostname']:
             dlpfsmurl = line1
@@ -35,22 +33,26 @@ def read_config(configfile):
             password = line1
         elif line0.lower() in ['location', 'Location']:
             incidents_results_full_path = line1
+        elif line0.lower() in ['incident_type']:
+            logged_incident_type = line1 #must be INCIDENTS or DISCOVERY
+        elif line0.lower() in ['verifycert', 'Verifycert']:
+            valid_certificate = True if (line1.lower() == 'true') else False
         else:
             pass
-    return username, password, dlpfsmurl, incidents_results_full_path
+    return username, password, dlpfsmurl, incidents_results_full_path, valid_certificate
 
 ################################
 # Get a <Refresh Token> from 
 #  credentials.
 ################################
-def getrefreshtoken(username,password,dlpfsmurl):
+def getrefreshtoken(username,password,dlpfsmurl,valid_certificate):
     headerz = {"username" : username, "password" : password}
     urlz = 'https://{}/dlp/rest/v1/auth/refresh-token'.format(dlpfsmurl)
     r={}
     try:
-        r = requests.post(urlz,headers=headerz,verify=False)
+        r = requests.post(urlz,headers=headerz,verify=valid_certificate)
         response = json.loads(r.text)
-        print('Refresh token = {}'.format(response["refresh_token"][-10:0]))
+        print('Refresh token={}'.format((response["refresh_token"])[-10:]))
     except Exception as err:
         print (err)
  
@@ -63,15 +65,15 @@ def getrefreshtoken(username,password,dlpfsmurl):
 # Get <Access Token> from Refresh 
 #  token.
 ################################
-def getnewaccesstoken(refreshtoken,dlpfsmurl):
+def getnewaccesstoken(refreshtoken,dlpfsmurl,valid_certificate):
     #data = {}
     headerz = {"refresh-token" : "Bearer {}".format(refreshtoken) }
     urlz = 'https://{}/dlp/rest/v1/auth/access-token'.format(dlpfsmurl)
     r={}
     try:
-        r = requests.post(urlz,headers=headerz,verify=False)
+        r = requests.post(urlz,headers=headerz,verify=valid_certificate)
         response = json.loads(r.text)
-        print('Access token = {}'.format(response["access_token"][-10:0]))
+        print('New Access token={}'.format((response["access_token"])[-10:]))
     except Exception as err:
         print (err)
         exit
@@ -87,9 +89,6 @@ def getnewaccesstoken(refreshtoken,dlpfsmurl):
 ################################   
 def retrieve_incidents(accesstoken,dlpfsmurl):
     
-    #s_from_date = "01/01/2022 00:00:00"
-    #s_to_date   = "04/01/2022 23:59:59"
-    
     data = {}
     responsecode = 200
     headerz = {"Authorization" : "Bearer {}".format(accesstoken) , "Content-Type": "application/json"}
@@ -97,8 +96,7 @@ def retrieve_incidents(accesstoken,dlpfsmurl):
     ##TBD make dynamic incidents with range taken from file.
     data = '{ "sort_by" : "INSERT_DATE", "type" : "INCIDENTS", "from_date" : "01/01/2022 00:00:00", "to_date" : "04/01/2022 23:59:59" }' 
     r={}
-    try:
-       
+    try:     
         r = requests.post(urlz, headers=headerz, data=data, verify=False)
         response = json.loads(r.text)
         if r.ok : 
@@ -110,6 +108,33 @@ def retrieve_incidents(accesstoken,dlpfsmurl):
     except Exception as err:
         print (err)
         exit
+
+######################################
+# retrieve incidents by time frame
+def retrieve_incidents_for_tf(accesstoken,dlpfsmurl, start_tf, end_tf,valid_certificate):
+    data = {}
+    response = {}
+    responsecode = 200
+    headerz = {"Authorization" : "Bearer {}".format(accesstoken) , "Content-Type": "application/json"}
+    urlz = 'https://{}/dlp/rest/v1/incidents'.format(dlpfsmurl)
+    dataSS = { "sort_by" : "INSERT_DATE", "type" : "INCIDENTS"}
+    dataSS["from_date"] = start_tf
+    dataSS["to_date"] =  end_tf
+    sdata=json.dumps(dataSS)
+    r={}
+    try:
+        r = requests.post(urlz, headers=headerz, data=sdata, verify=valid_certificate)
+        if r.ok : 
+            responsecode = 200
+            response = json.loads(r.text)
+        else :
+            print(r.text)
+            responsecode = r.status_code
+        return response, responsecode
+    except Exception as err:
+        print (err)
+        exit
+
 
 ################################
 # #TBD chck the access token from the previous response
@@ -130,15 +155,30 @@ def writetofile(incidents_bulk,incidents_results_full_path):
     date_time = now.strftime("_%m-%d-%Y-%H-%M-%S")
 
     ## TBD:  add path for windows or linux with if statement selection 
-    filename = incidents_results_full_path + '/DLP_incidnets' + date_time
+    filename = incidents_results_full_path + '/DLP_incidnets' + date_time + '.log'
     incident_list = incidents_bulk.get('incidents')
 
-    with open(filename, mode="wt", encoding='utf-8') as f:
-        f.write('\n'.join(incident_list))
-#    with open(filename, "w+") as f:
-        # incidents_bulk.items().len()
-        #f.writelines(incidents_bulk.items())
-        #f.close
+    file=open(filename, mode="wt", encoding='utf-8')
+    for items in incident_list:
+        output_s = pprint.pformat(items) 
+        output_s += '\n'      
+        file.write(output_s)
+    file.close()
+    return str('completed writing {} incidents to {}'.format(len(incident_list),filename))
+
+def get_time_frame_for_next_request(timestamp, seconds):
+    dt = datetime.now()
+    ts2 = datetime.timestamp(dt)
+    ts1 = ts2 - seconds
+
+    end_tfx = datetime.fromtimestamp(ts2)
+    start_tfx = datetime.fromtimestamp(ts1)
+
+    # convert timestamp to string in dd-mm-yyyy HH:MM:SS
+    start_tf = start_tfx.strftime("%d/%m/%Y %H:%M:%S")
+    end_tf = end_tfx.strftime("%d/%m/%Y %H:%M:%S")
+
+    return start_tf, end_tf 
 
 
 ################################
@@ -155,11 +195,12 @@ def main():
     dlpfsmurl = ''
     accesstoken = ''
     incidents_results_full_path  =  ''  #  Full path to results folder.
+# TBD add these variables to the functions:
     valid_certificate = False
+    logged_incident_type = 'INCIDENTS'
     configfile = 'restapi.conf'
+    polling_interval = 5 * 60 # seconds
     
-    print("DLP RestAPI start \n")
-
     logging.basicConfig(
      filename='DLPAPI.log',
      level=logging.INFO, 
@@ -168,10 +209,10 @@ def main():
     
     logger = logging.getLogger(__name__)
     #Testing our Logger
-    logger.info("DLP RestAPI start")
+    logger.info("DLP RestAPI started")
 
     logger.info("Read Config file")
-    username, password, dlpfsmurl,incidents_results_full_path = read_config(configfile)
+    username, password, dlpfsmurl,incidents_results_full_path, valid_certificate = read_config(configfile)
     if ( (username) and (password) and (dlpfsmurl) and (incidents_results_full_path)):
         logger.info("Config file ok")
     else :
@@ -179,35 +220,52 @@ def main():
         exit
         
     # get initial token 
-    refreshtoken = getrefreshtoken(username,password,dlpfsmurl)
+    refreshtoken = getrefreshtoken(username,password,dlpfsmurl,valid_certificate)
 
     # get access token
-    accesstoken = getnewaccesstoken(refreshtoken,dlpfsmurl)
+    accesstoken = getnewaccesstoken(refreshtoken,dlpfsmurl,valid_certificate)
     accesstokenvalid = False
-        
-    # DISABLED workaround for testing incidents: 
-    #incidents_bulk = retrieve_incidents2multipart(accesstoken,dlpfsmurl)
-    #if incidents_bulk: writetofile(incidents_bulk,incidents_results_full_path)
-
+    
 ############################################################################
 #
 # This part is an endless loop where we try to retrieve the next incidents
 # 
-    #timestamp1 = datetime.timestamp
+    while (True):
+        if (accesstokenvalid):
+            start_tf, end_tf = get_time_frame_for_next_request(datetime.timestamp, polling_interval ) #5 min
+
+            incidents_bulk, responsecode = retrieve_incidents_for_tf(accesstoken,dlpfsmurl, start_tf, end_tf,valid_certificate)
+            accesstokenvalid = check_validity_at(responsecode)
+            # incidents items clount
+            if (accesstokenvalid and incidents_bulk['total_count'] > 0): 
+                status =writetofile(incidents_bulk,incidents_results_full_path)
+                logger.info(status)
+        else:
+            accesstoken = getnewaccesstoken(refreshtoken,dlpfsmurl,valid_certificate)
+            if (accesstoken) : accesstokenvalid = True
+
+        # TBD calculate the next interation before continueing to retrive.
+        now = datetime.now() # current date and time
+        logger.info('sleep time: {}'.format(now.strftime("_%m-%d-%Y-%H-%M-%S")) )
+        time.sleep(polling_interval) #wait until next iteration
+
+# the previous iteration that retrieves the old incidents.
     while (True):
         if (accesstokenvalid):
             incidents_bulk, responsecode = retrieve_incidents(accesstoken,dlpfsmurl)
             accesstokenvalid = check_validity_at(responsecode)
-            # TBD change this to items clount
+            # incidents items clount
             if (incidents_bulk['total_count'] > 0): 
                 writetofile(incidents_bulk,incidents_results_full_path)
         else:
             accesstoken = getnewaccesstoken(refreshtoken,dlpfsmurl)
             if (accesstoken) : accesstokenvalid = True
-            
-        time.sleep(60) #wait one mintue until next iteration
 
+        # TBD calculate the next interation before continueing to retrive.
+         
+        time.sleep(polling_interval) #wait one mintue until next iteration
 
+#TBD retrive discovery incidents
 
 ################################
 # Main call 
