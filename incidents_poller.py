@@ -41,7 +41,7 @@ def read_config(configfile):
             valid_certificate = True if (line1.lower() == 'true') else False
         else:
             pass
-    return username, password, dlpfsmurl, incidents_results_full_path, valid_certificate
+    return username, password, dlpfsmurl, incidents_results_full_path, valid_certificate,logged_incident_type
 
 ################################
 # Get a <Refresh Token> from 
@@ -113,30 +113,30 @@ def retrieve_incidents(accesstoken,dlpfsmurl):
 
 ######################################
 # retrieve incidents by time frame
-def retrieve_incidents_for_tf(accesstoken,dlpfsmurl, start_tf, end_tf,valid_certificate):
-    data = {}
+def retrieve_incidents_for_tf(accesstoken,dlpfsmurl, start_tf, end_tf,valid_certificate,logged_incident_type):
     response = {}
     responsecode = 200
     headerz = {"Authorization" : "Bearer {}".format(accesstoken) , "Content-Type": "application/json"}
     urlz = 'https://{}/dlp/rest/v1/incidents'.format(dlpfsmurl)
-    dataSS = { "sort_by" : "INSERT_DATE", "type" : "INCIDENTS"}
-    dataSS["from_date"] = start_tf
-    dataSS["to_date"] =  end_tf
-    sdata=json.dumps(dataSS)
+    data_dict = { "sort_by" : "INSERT_DATE" }
+    data_dict["type"] = logged_incident_type
+    data_dict["from_date"] = start_tf
+    data_dict["to_date"] =  end_tf
+    sdata=json.dumps(data_dict)
     r={}
     try:
         r = requests.post(urlz, headers=headerz, data=sdata, verify=valid_certificate)
-        if r.ok : 
-            responsecode = 200
-            response = json.loads(r.text)
-        else :
-            print(r.text)
-            responsecode = r.status_code
-        return response, responsecode
     except Exception as err:
         print (err)
         exit
 
+    if r.ok : 
+        response = json.loads(r.text)
+    else :
+        print(r.reason)
+        responsecode = r.status_code
+
+    return response, responsecode
 
 ################################
 # #TBD chck the access token from the previous response
@@ -215,7 +215,7 @@ def main():
     logger.info("DLP RestAPI started")
 
     logger.info("Read Config file")
-    username, password, dlpfsmurl,incidents_results_full_path, valid_certificate = read_config(configfile)
+    username, password, dlpfsmurl,incidents_results_full_path, valid_certificate, logged_incident_type  = read_config(configfile)
     if ( (username) and (password) and (dlpfsmurl) and (incidents_results_full_path)):
         logger.info("Config file ok")
     else :
@@ -237,7 +237,8 @@ def main():
         if (accesstokenvalid):
             start_tf, end_tf = get_time_frame_for_next_request(datetime.timestamp, polling_interval ) #5 min
 
-            incidents_bulk, responsecode = retrieve_incidents_for_tf(accesstoken,dlpfsmurl, start_tf, end_tf,valid_certificate)
+            incidents_bulk, responsecode = retrieve_incidents_for_tf(accesstoken,dlpfsmurl, start_tf, end_tf,valid_certificate, logged_incident_type)
+            logger.info('request for {} returned status code: {}'.format(logged_incident_type, responsecode))
             accesstokenvalid = check_validity_at(responsecode)
             # incidents items clount
             if (accesstokenvalid and incidents_bulk['total_count'] > 0): 
