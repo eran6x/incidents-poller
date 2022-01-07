@@ -1,5 +1,11 @@
 #########################################
 # configuration file
+# Instructions:
+# rename this file to restapi.conf and fill the details.
+# hostname can be appended with port number <host>:<port>
+# location must point to existing folder
+# if you use self-signed cert for FSM then verifycert=False
+# this version ignores the start date. (retrive incidents from current time)
 #########################################
 username=serviceaccount
 password=MYpassword!
@@ -7,4 +13,4 @@ hostname=hostlab.go4labs.net
 location=/Users/eran/Documents/projects/restAPI/results
 incident_type=INCIDENTS
 verifycert=False
-start_date=01/01/2022
+#start_date=01/01/2022
