@@ -8,7 +8,9 @@ import pprint
 __author__ = 'Eran Amir 2022'
 
 ################################
-# TBD 1) add verify certificate flag.
+# This script retrives incidents from launch time onwards in continuous loop.
+# Edit the configuration file "restapi.conf" Before running the script 
+# v 0.2
 
 ################################
 # Read config From file
@@ -161,6 +163,7 @@ def writetofile(incidents_bulk,incidents_results_full_path):
     file=open(filename, mode="wt", encoding='utf-8')
     for items in incident_list:
         output_s = pprint.pformat(items) 
+        output_s = output_s.replace("\n", " ")
         output_s += '\n'      
         file.write(output_s)
     file.close()
