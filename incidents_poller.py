@@ -135,8 +135,47 @@ def retrieve_incidents_for_tf(accesstoken,dlpfsmurl, start_tf, end_tf,valid_cert
     else :
         print(r.reason)
         responsecode = r.status_code
-
     return response, responsecode
+
+######################################
+# retrieve incidents by time frame
+# example data: 
+# '{ 
+#     "incident_keys" : [ { "incident_id" : 271966800000, "partition_index": 20210831 } ],   
+#     "type" : "INCIDENTS", 
+#     "action_type" : "STATUS", 
+#     "value" : "NEW"  
+# }'
+def update_incident(accesstoken,dlpfsmurl, incident_id, partition_id, new_type, new_action, new_value,valid_certificate):
+
+    headerz = {"Authorization" : "Bearer {}".format(accesstoken) , "Content-Type": "application/json"}
+    urlz = 'https://{}/dlp/rest/v1/incidents/update'.format(dlpfsmurl)
+
+    ii_dict = {}
+    ii_dict["incident_id"] =  incident_id
+    ii_dict["partition_index"] = partition_id 
+
+    ip_array = []
+    ip_array.append(ii_dict)
+
+    data_dict = {}
+    data_dict["incident_keys"] =  ip_array
+    data_dict["type"] =  new_type
+    data_dict["action_type"] = new_action 
+    data_dict["value"] =   new_value
+
+    sdata=json.dumps(data_dict)
+    r={}
+    try:
+        r = requests.post(urlz, headers=headerz, data=sdata, verify=valid_certificate)
+    except Exception as err:
+        print (err)
+        exit
+
+    return r.status_code
+
+
+
 
 ################################
 # #TBD chck the access token from the previous response
