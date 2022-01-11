@@ -241,7 +241,9 @@ def main():
     valid_certificate = False
     logged_incident_type = 'INCIDENTS'
     configfile = 'restapi.conf'
-    polling_interval = 5 * 60 # seconds
+    # polling interval of 1 minute is for debugging/demo only. 
+    # for production environment please set 5 or 10m ( 5 * 60 )
+    polling_interval = 1 * 60 # seconds
     
     logging.basicConfig(
      filename='DLPAPI.log',
@@ -272,6 +274,8 @@ def main():
 #
 # This part is an endless loop where we try to retrieve the next incidents
 # 
+    if (polling_interval  < 100 ):
+        print ('Extensive Polling of FSM is not recommended for production!\n ')
     while (True):
         if (accesstokenvalid):
             start_tf, end_tf = get_time_frame_for_next_request(datetime.timestamp, polling_interval ) #5 min
@@ -292,21 +296,6 @@ def main():
         logger.info('sleep time: {}'.format(now.strftime("_%m-%d-%Y-%H-%M-%S")) )
         time.sleep(polling_interval) #wait until next iteration
 
-# the previous iteration that retrieves the old incidents.
-    while (True):
-        if (accesstokenvalid):
-            incidents_bulk, responsecode = retrieve_incidents(accesstoken,dlpfsmurl)
-            accesstokenvalid = check_validity_at(responsecode)
-            # incidents items clount
-            if (incidents_bulk['total_count'] > 0): 
-                writetofile(incidents_bulk,incidents_results_full_path)
-        else:
-            accesstoken = getnewaccesstoken(refreshtoken,dlpfsmurl)
-            if (accesstoken) : accesstokenvalid = True
-
-        # TBD calculate the next interation before continueing to retrive.
-         
-        time.sleep(polling_interval) #wait one mintue until next iteration
 
 #TBD retrive discovery incidents
 
