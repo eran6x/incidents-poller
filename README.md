@@ -20,6 +20,9 @@ incident update: update incident deails:
 usage:
 python incident_update.py  -i 1734266 -p 20211011 -t INCIDENTS -a STATUS -v CLOSED
 
+python incident_update.py -i 1932312 -p 20220110 -t INCIDENTS -a SEVERITY -v LOW
+
+
 Troubleshooting:
 ================
 
