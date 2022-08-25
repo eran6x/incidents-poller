@@ -89,15 +89,15 @@ def main(argv):
 #
 # update incidents
 # 
-
-
     responsecode = ip.update_incident(accesstoken,dlpfsmurl, incident_id, partition_id, new_type, new_action, new_value,valid_certificate)
     logger.info('request for {} returned status code: {}'.format(incident_id, responsecode))
     accesstokenvalid = ip.check_validity_at(responsecode)
-    # incidents items clount
     # write update to log and to screen. 
-    if (not accesstokenvalid): 
-        print('request for {} returned status code: {}'.format(incident_id, responsecode))
+    print('request: {} returned status code: {}'.format(incident_id, responsecode))
+    if ( accesstokenvalid ): 
+        logger.info('request for {} returned status code: {}'.format(incident_id, responsecode))
+        print('update successful\n')
+    else:
         logger.error('request for {} returned status code: {}'.format(incident_id, responsecode))
 
 
