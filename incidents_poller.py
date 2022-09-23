@@ -4,6 +4,7 @@ import logging
 import requests
 from datetime import datetime
 import pprint
+import servicenow_incident
 
 __author__ = 'Eran Amir 2022'
 
@@ -39,9 +40,17 @@ def read_config(configfile):
             logged_incident_type = line1 #must be INCIDENTS or DISCOVERY
         elif line0.lower() in ['verifycert', 'Verifycert']:
             valid_certificate = True if (line1.lower() == 'true') else False
+        elif line0.lower() in ['servicenow_enabled', 'servicenow_enabled']:
+            servicenow_enabled = True if (line1.lower() == 'true') else False
+        elif line0.lower() in ['servicenow_instance', 'servicenow_instance']:
+            servicenow_instance = line1
+        elif line0.lower() in ['servicenow_user', 'servicenow_user']:
+            servicenow_user = line1
+        elif line0.lower() in ['servicenow_password', 'servicenow_password']:
+            servicenow_password = line1
         else:
             pass
-    return username, password, dlpfsmurl, incidents_results_full_path, valid_certificate,logged_incident_type
+    return username, password, dlpfsmurl, incidents_results_full_path,valid_certificate,logged_incident_type,servicenow_enabled, servicenow_instance, servicenow_user, servicenow_password
 
 ################################
 # Get a <Refresh Token> from 
@@ -195,8 +204,8 @@ def writetofile(incidents_bulk,incidents_results_full_path):
     now = datetime.now() # current date and time
     date_time = now.strftime("_%m-%d-%Y-%H-%M-%S")
 
-    ## TBD:  add path for windows or linux with if statement selection 
-    filename = incidents_results_full_path + '/DLP_incidnets' + date_time + '.log'
+    ## TODO::  add path for windows or linux with if statement selection 
+    filename = incidents_results_full_path + 'DLP_incidnets' + date_time + '.log'
     incident_list = incidents_bulk.get('incidents')
 
     file=open(filename, mode="wt", encoding='utf-8')
@@ -256,7 +265,7 @@ def main():
     logger.info("DLP RestAPI started")
 
     logger.info("Read Config file")
-    username, password, dlpfsmurl,incidents_results_full_path, valid_certificate, logged_incident_type  = read_config(configfile)
+    username, password, dlpfsmurl,incidents_results_full_path, valid_certificate, logged_incident_type, servicenow_enabled, servicenow_instance, servicenow_user, servicenow_password  = read_config(configfile)
     if ( (username) and (password) and (dlpfsmurl) and (incidents_results_full_path)):
         logger.info("Config file ok")
     else :
@@ -269,7 +278,6 @@ def main():
     # get access token
     accesstoken = getnewaccesstoken(refreshtoken,dlpfsmurl,valid_certificate)
     accesstokenvalid = False
-    
 ############################################################################
 #
 # This part is an endless loop where we try to retrieve the next incidents
@@ -284,9 +292,13 @@ def main():
             logger.info('request for {} returned status code: {}'.format(logged_incident_type, responsecode))
             accesstokenvalid = check_validity_at(responsecode)
             # incidents items clount
-            if (accesstokenvalid and incidents_bulk['total_count'] > 0): 
+            if (accesstokenvalid and incidents_bulk['total_count'] > 0):
                 status =writetofile(incidents_bulk,incidents_results_full_path)
                 logger.info(status)
+                if (servicenow_enabled):
+                    logger.info('Pushing incidents to Servicenow instance: {}'.format(servicenow_instance))
+                    push_status = servicenow_incident.push_incidents_to_servicenow(servicenow_instance, servicenow_user, servicenow_password,incidents_bulk)
+                    logger.info('ServiceNow API returned status: {}'.format(push_status))
         else:
             accesstoken = getnewaccesstoken(refreshtoken,dlpfsmurl,valid_certificate)
             if (accesstoken) : accesstokenvalid = True

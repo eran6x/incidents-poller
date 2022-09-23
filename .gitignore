@@ -1,4 +1,9 @@
-venv
-.vscode
 __pycache__
 *.log
+*.conf
+restapi.conf
+.venv
+venv/
+venv/pyvenv.cfg
+.vscode
+*.code-workspace
