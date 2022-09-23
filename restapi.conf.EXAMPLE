@@ -14,3 +14,7 @@ location=/Users/eran/Documents/projects/restAPI/results
 incident_type=INCIDENTS
 verifycert=False
 #start_date=01/01/2022
+servicenow_enabled=False
+servicenow_instance=dev00000
+servicenow_user=serviceaccount
+servicenow_password=MyP@ssw0rd!
