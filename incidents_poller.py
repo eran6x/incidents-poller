@@ -296,7 +296,7 @@ def main():
                 status =writetofile(incidents_bulk,incidents_results_full_path)
                 logger.info(status)
                 if (servicenow_enabled):
-                    logger.info('Pushing incidents to Servicenow instance: {}'.format(servicenow_instance))
+                    logger.info('Pushing {} incidents to Servicenow instance: {}'.format(servicenow_instance, len(incidents_bulk['incidents'])))
                     push_status = servicenow_incident.push_incidents_to_servicenow(servicenow_instance, servicenow_user, servicenow_password,incidents_bulk)
                     logger.info('ServiceNow API returned status: {}'.format(push_status))
         else:

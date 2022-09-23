@@ -3,13 +3,8 @@ Create Incidents in Servicenow instance according to pulled incidents details.
 @Author Eran Amir, (Eran.Amir@forcepoint.com)
 @ Year 2022
 
-Sources:
-servicenow.com/docs/
-https://www.youtube.com/watch?v=bTK-hrbgPzs
 
 '''
-#Need to install requests package for python
-#easy_install requests
 import requests
 import json
 
@@ -32,26 +27,18 @@ def format_request_body(incident, servicenow_user):
     if (raw_impact=="HIGH"):
         impact = "1 - High"
 
-    #original_data="{\"caller_id\":\"Abel Tuter\",\"category\":\"Software\",\"impact\":\"3 - Low\",\"short_description\":\"Abel Tuter is goodshort_description\",\"subcategory\":\"Email\"}"
-    #return original_data
-    # request_body_dummy = "{\"caller_id\":\"Abel Tuter\",\"short_description\":\"Integration24 short description\",\"category\":\"Software\",\"impact\":\"2 - Medium\"}"
-#    request_body = f'\"caller_id\":\"{caller_id}\",\"short_description\":\"{short_description}\",\"category\":\"{category}\",\"impact\":\"{impact}\" \n'
     request_body = f"\"caller_id\":\"{caller_id}\",\"category\":\"Software\",\"impact\":\"{impact}\",\"short_description\":\"{short_description}\",\"subcategory\":\"Email\""
 
     request_body2 = '{' + request_body + '}'
-    print(request_body2)
     return request_body2
-    # print(request_body_dummy)
-    #return json.loads(request_body2)
-
 
 def push_incidents_to_servicenow(servicenow_instance, servicenow_user, servicenow_password,incidents_bulk):
-    print('get servicenow token')
-
     print('push {} incidents to {}'.format(str(len(incidents_bulk['incidents'])), servicenow_instance))
+    last_response_code = 200
     for incident in incidents_bulk['incidents']:
         request_body = format_request_body(incident, servicenow_user)
-        push_incident(servicenow_instance, servicenow_user, servicenow_password,request_body)
+        last_response_code = push_incident(servicenow_instance, servicenow_user, servicenow_password,request_body)
+    return last_response_code
 
 def push_incident(servicenow_instance, user, pwd,incident):
     # Set the request parameters
@@ -67,17 +54,13 @@ def push_incident(servicenow_instance, user, pwd,incident):
     except Exception as err:
         print (err)
         # exit
-    print(str(response.status_code))
+    # print(str(response.status_code))
 
     if response.status_code > 201: # accepted/partial
         print('ERROR:\nStatus:', response.status_code,
             '\nHeaders:', response.headers,
             '\nError Response:',response.json())
-        # exit()
 
-    # Decode the JSON response into a dictionary and use the data
-    # data = response.json()
-    # print(data)
     return response.status_code
 
 def tester():
