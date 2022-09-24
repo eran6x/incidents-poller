@@ -7,6 +7,7 @@ Create Incidents in Servicenow instance according to pulled incidents details.
 '''
 import requests
 import json
+import urllib.parse
 
 def dummy_input():
     incident = { 'id':'6760673', 'severity': 'HIGH', 'action': 'BLOCKED', 'status': 'New', 'source': {'manager': 'Dave Roberts', 'login_name': 'PRES3NT\\will', 'host_name': 'Win10-GV.pres3nt.local', 'business_unit': 'High risk Users'}, 'history': [{...}, {...}], 'event_id': '5379011321656598049', 'maximum_matches': 3, 'transaction_size': 36537, 'analyzed_by': 'Policy Engine  srv-fs3nt.local', 'ignored_incidents': False, 'event_time': '23/09/2022 22:13:48', 'incident_time': '23/09/2022 22:14:24',
@@ -27,9 +28,13 @@ def format_request_body(incident, servicenow_user):
     if (raw_impact=="HIGH"):
         impact = "1 - High"
 
-    request_body = f"\"caller_id\":\"{caller_id}\",\"category\":\"Software\",\"impact\":\"{impact}\",\"short_description\":\"{short_description}\",\"subcategory\":\"Email\""
+    # add all fields to general description:
+    description = urllib.parse.urlencode(incident)
 
+    #request_body = f"\"caller_id\":\"{caller_id}\",\"category\":\"Software\",\"impact\":\"{impact}\",\"short_description\":\"{short_description}\",\"subcategory\":\"Email\""
+    request_body = f"\"caller_id\":\"{caller_id}\",\"category\":\"Software\",\"impact\":\"{impact}\",\"short_description\":\"{short_description}\",\"subcategory\":\"Email\",\"description\":\"{description}\""
     request_body2 = '{' + request_body + '}'
+    print(request_body2)
     return request_body2
 
 def push_incidents_to_servicenow(servicenow_instance, servicenow_user, servicenow_password,incidents_bulk):

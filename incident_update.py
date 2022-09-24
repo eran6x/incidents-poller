@@ -1,7 +1,6 @@
 import sys, getopt
 import incidents_poller as ip
 import logging
-from datetime import datetime
 
 __author__ = 'Eran Amir 2022'
 
@@ -77,7 +76,7 @@ def main(argv):
     else :
         logger.error("Bad Config file")
         exit
-        
+
     # get initial token 
     refreshtoken = ip.getrefreshtoken(username,password,dlpfsmurl,valid_certificate)
 
@@ -90,20 +89,19 @@ def main(argv):
 # update incidents
 # 
     responsecode = ip.update_incident(accesstoken,dlpfsmurl, incident_id, partition_id, new_type, new_action, new_value,valid_certificate)
-    logger.info('request for {} returned status code: {}'.format(incident_id, responsecode))
+    logger.info(f'request for {incident_id} returned status code: {responsecode}')
     accesstokenvalid = ip.check_validity_at(responsecode)
     # write update to log and to screen. 
-    print('request: {} returned status code: {}'.format(incident_id, responsecode))
+    print(f'request: {incident_id} returned status code: {responsecode}')
     if ( accesstokenvalid ): 
-        logger.info('request for {} returned status code: {}'.format(incident_id, responsecode))
+        logger.info(f'request for {incident_id} returned status code: {responsecode}')
         print('update successful\n')
     else:
-        logger.error('request for {} returned status code: {}'.format(incident_id, responsecode))
-
+        logger.error(f'request for {incident_id} returned status code: {responsecode}')
 
 ################################
 # Main call 
-#  Eran Amir 2022(c) 
+#  Eran Amir 2022(c)
 ################################
 if __name__ == "__main__":
    main(sys.argv[1:])
