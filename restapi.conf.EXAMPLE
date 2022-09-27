@@ -1,11 +1,17 @@
 #########################################
-# configuration file
-# Instructions:
-# rename this file to restapi.conf and fill the details.
+# configuration file instructions:
+# Rename this file to restapi.conf and fill the details. You can omit this header.
+# Notes: 
+# username/password - FSM API user credentials.
 # hostname can be appended with port number <host>:<port>
-# location must point to existing folder
+# location must point to existing folder with a slash at the end.
 # if you use self-signed cert for FSM then verifycert=False
-# this version ignores the start date. (retrive incidents from current time)
+# start_date- Currently disabled feature. (retrive incidents from current time onwards)
+# servicenow_enabled - will forward events to servicenow if True.
+# servicenow_create_incident_from - Filtering mechanism for sending events.
+# FSM events severity is: LOW, MEDIUM, HIGH, CRITICAL. If value set to either, incidents will be created for this severity and higher.
+#
+#
 #########################################
 username=serviceaccount
 password=MYpassword!
@@ -18,3 +24,4 @@ servicenow_enabled=False
 servicenow_instance=dev00000
 servicenow_user=serviceaccount
 servicenow_password=MyP@ssw0rd!
+servicenow_create_incident_from=MEDIUM

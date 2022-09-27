@@ -6,7 +6,6 @@ Create Incidents in Servicenow instance according to pulled incidents details.
 
 '''
 import requests
-import json
 import urllib.parse
 
 def dummy_input():
@@ -14,6 +13,15 @@ def dummy_input():
              'channel': 'ENDPOINT_HTTPS', 'destination':'DLPTEST.COM','policies':'KSA ; France PII; Germany PII'}
     formatted_incident = format_request_body(incident, 'IntegrationUser')
     push_incident('dev91718', 'IntegrationUser', 'Forcepoint1!', formatted_incident)
+
+
+''' check if severity is equal or hight than the "create incident from", and return value'''
+def passed_severity_filter(severity, servicenow_create_incident_from):
+    if (severity == servicenow_create_incident_from or servicenow_create_incident_from=='LOW'):
+        return True
+    elif (servicenow_create_incident_from=='MEDIUM' and severity=='HIGH'):
+        return True
+    return False
 
 
 def format_request_body(incident, servicenow_user):
@@ -31,18 +39,22 @@ def format_request_body(incident, servicenow_user):
     # add all fields to general description:
     description = urllib.parse.urlencode(incident)
 
-    #request_body = f"\"caller_id\":\"{caller_id}\",\"category\":\"Software\",\"impact\":\"{impact}\",\"short_description\":\"{short_description}\",\"subcategory\":\"Email\""
     request_body = f"\"caller_id\":\"{caller_id}\",\"category\":\"Software\",\"impact\":\"{impact}\",\"short_description\":\"{short_description}\",\"subcategory\":\"Email\",\"description\":\"{description}\""
     request_body2 = '{' + request_body + '}'
     print(request_body2)
     return request_body2
 
-def push_incidents_to_servicenow(servicenow_instance, servicenow_user, servicenow_password,incidents_bulk):
+
+''' create RestAPI request for Servicenow to create an incident in the table'''
+def push_incidents_to_servicenow(servicenow_instance, servicenow_user, servicenow_password,incidents_bulk, servicenow_create_incident_from):
     print('push {} incidents to {}'.format(str(len(incidents_bulk['incidents'])), servicenow_instance))
     last_response_code = 200
     for incident in incidents_bulk['incidents']:
         request_body = format_request_body(incident, servicenow_user)
-        last_response_code = push_incident(servicenow_instance, servicenow_user, servicenow_password,request_body)
+        if (passed_severity_filter(incident["severity"], servicenow_create_incident_from)):
+            last_response_code = push_incident(servicenow_instance, servicenow_user, servicenow_password,request_body)
+        else: 
+            last_response_code = '-1'
     return last_response_code
 
 def push_incident(servicenow_instance, user, pwd,incident):

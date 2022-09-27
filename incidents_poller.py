@@ -27,7 +27,7 @@ def read_config(configfile):
         line0 = line.split('=')[0]
         line1 = (line.split('=')[1])
         line1 = line1. rstrip("\n")
-
+        # TODO remove the second option with uppercase
         if line0.lower() in ['hostname', 'Hostname']:
             dlpfsmurl = line1
         elif line0.lower() in ['username', 'Username']:
@@ -40,17 +40,20 @@ def read_config(configfile):
             logged_incident_type = line1 #must be INCIDENTS or DISCOVERY
         elif line0.lower() in ['verifycert', 'Verifycert']:
             valid_certificate = True if (line1.lower() == 'true') else False
-        elif line0.lower() in ['servicenow_enabled', 'servicenow_enabled']:
+        elif line0.lower() in ['servicenow_enabled', 'Servicenow_enabled']:
             servicenow_enabled = True if (line1.lower() == 'true') else False
-        elif line0.lower() in ['servicenow_instance', 'servicenow_instance']:
+        elif line0.lower() in ['servicenow_instance', 'Servicenow_instance']:
             servicenow_instance = line1
-        elif line0.lower() in ['servicenow_user', 'servicenow_user']:
+        elif line0.lower() in ['servicenow_user', 'Servicenow_user']:
             servicenow_user = line1
-        elif line0.lower() in ['servicenow_password', 'servicenow_password']:
+        elif line0.lower() in ['servicenow_password', 'Servicenow_password']:
             servicenow_password = line1
+        elif line0.lower() in ['servicenow_create_incident_from']:
+            servicenow_create_incident_from = line1
+
         else:
             pass
-    return username, password, dlpfsmurl, incidents_results_full_path,valid_certificate,logged_incident_type,servicenow_enabled, servicenow_instance, servicenow_user, servicenow_password
+    return username, password, dlpfsmurl, incidents_results_full_path,valid_certificate,logged_incident_type,servicenow_enabled, servicenow_instance, servicenow_user, servicenow_password, servicenow_create_incident_from
 
 ################################
 # Get a <Refresh Token> from 
@@ -63,7 +66,7 @@ def getrefreshtoken(username,password,dlpfsmurl,valid_certificate):
     try:
         r = requests.post(urlz,headers=headerz,verify=valid_certificate)
         response = json.loads(r.text)
-        print('Refresh token={}'.format((response["refresh_token"])[-10:]))
+        print('Refresh token={}..xxxx'.format((response["refresh_token"])[-10:]))
     except Exception as err:
         print (err)
  
@@ -84,7 +87,7 @@ def getnewaccesstoken(refreshtoken,dlpfsmurl,valid_certificate):
     try:
         r = requests.post(urlz,headers=headerz,verify=valid_certificate)
         response = json.loads(r.text)
-        print('New Access token={}'.format((response["access_token"])[-10:]))
+        print('New Access token={}..xxxx'.format((response["access_token"])[-10:]))
     except Exception as err:
         print (err)
         exit
@@ -265,7 +268,7 @@ def main():
     logger.info("DLP RestAPI started")
 
     logger.info("Read Config file")
-    username, password, dlpfsmurl,incidents_results_full_path, valid_certificate, logged_incident_type, servicenow_enabled, servicenow_instance, servicenow_user, servicenow_password  = read_config(configfile)
+    username, password, dlpfsmurl,incidents_results_full_path, valid_certificate, logged_incident_type, servicenow_enabled, servicenow_instance, servicenow_user, servicenow_password, servicenow_create_incident_from = read_config(configfile)
     if ( (username) and (password) and (dlpfsmurl) and (incidents_results_full_path)):
         logger.info("Config file ok")
     else :
@@ -274,6 +277,12 @@ def main():
         
     # get initial token 
     refreshtoken = getrefreshtoken(username,password,dlpfsmurl,valid_certificate)
+    if (refreshtoken is not None):
+        logger.info("Auth token retrieved")
+    else :
+        logger.error("Bad authentication. please check your config file and try again.")
+        exit
+          
 
     # get access token
     accesstoken = getnewaccesstoken(refreshtoken,dlpfsmurl,valid_certificate)
@@ -297,7 +306,7 @@ def main():
                 logger.info(status)
                 if (servicenow_enabled):
                     logger.info('Pushing {} incidents to Servicenow instance: {}'.format(servicenow_instance, len(incidents_bulk['incidents'])))
-                    push_status = servicenow_incident.push_incidents_to_servicenow(servicenow_instance, servicenow_user, servicenow_password,incidents_bulk)
+                    push_status = servicenow_incident.push_incidents_to_servicenow(servicenow_instance, servicenow_user, servicenow_password,incidents_bulk, servicenow_create_incident_from)
                     logger.info('ServiceNow API returned status: {}'.format(push_status))
         else:
             accesstoken = getnewaccesstoken(refreshtoken,dlpfsmurl,valid_certificate)
