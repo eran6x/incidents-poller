@@ -70,7 +70,7 @@ def main(argv):
     logger.info("DLP update started")
 
     logger.info("Read Config file")
-    username, password, dlpfsmurl,incidents_results_full_path, valid_certificate, logged_incident_type  = ip.read_config(configfile)
+    username, password, dlpfsmurl,incidents_results_full_path, valid_certificate, logged_incident_type, servicenow_enabled, servicenow_instance, servicenow_user, servicenow_password, servicenow_create_incident_from  = ip.read_config(configfile)
     if ( (username) and (password) and (dlpfsmurl) and (incidents_results_full_path)):
         logger.info("Config file ok")
     else :
@@ -99,6 +99,7 @@ def main(argv):
     else:
         logger.error(f'request for {incident_id} returned status code: {responsecode}')
 
+    return responsecode
 ################################
 # Main call 
 #  Eran Amir 2022(c)
