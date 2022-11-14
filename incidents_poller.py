@@ -1,27 +1,29 @@
 import json
-import time
 import logging
-import requests
-from datetime import datetime
 import pprint
+import time
+from datetime import datetime
+import sys
+import requests
 import servicenow_incident
 
 __author__ = 'Eran Amir 2022'
 
 ################################
 # This script retrives incidents from launch time onwards in continuous loop.
-# Edit the configuration file "restapi.conf" Before running the script 
-# v 0.2
+# Edit the configuration file "restapi.conf" Before running the script
+# v 0.3
 
 ################################
 # Read config From file
 #
 ################################
 def read_config(configfile):
-    file1 = open(configfile, 'r')
-    Lines = file1.readlines()
+    ''' Read connection info and configuration from restapi.conf file'''
+    file1 = open(configfile, 'r', encoding="utf8")
+    lines = file1.readlines()
 
-    for line in Lines:
+    for line in lines:
         if ( line.startswith('#') or line.startswith('\n') ) :
             continue
         line0 = line.split('=')[0]
@@ -53,13 +55,16 @@ def read_config(configfile):
 
         else:
             pass
-    return username, password, dlpfsmurl, incidents_results_full_path,valid_certificate,logged_incident_type,servicenow_enabled, servicenow_instance, servicenow_user, servicenow_password, servicenow_create_incident_from
+    return username, password, dlpfsmurl, incidents_results_full_path,valid_certificate, \
+           logged_incident_type, servicenow_enabled, servicenow_instance, servicenow_user, \
+           servicenow_password, servicenow_create_incident_from
 
 ################################
-# Get a <Refresh Token> from 
+# Get a <Refresh Token> from
 #  credentials.
 ################################
 def getrefreshtoken(username,password,dlpfsmurl,valid_certificate):
+    '''Get a <Refresh Token> from credentials.'''
     headerz = {"username" : username, "password" : password}
     urlz = 'https://{}/dlp/rest/v1/auth/refresh-token'.format(dlpfsmurl)
     r={}
@@ -67,50 +72,53 @@ def getrefreshtoken(username,password,dlpfsmurl,valid_certificate):
         r = requests.post(urlz,headers=headerz,verify=valid_certificate)
         response = json.loads(r.text)
         print('Refresh token={}..xxxx'.format((response["refresh_token"])[-10:]))
-    except Exception as err:
+    except requests.exceptions.RequestException as err:
         print (err)
- 
+
     if r.status_code == 200:
         return response["refresh_token"]
     else:
-        return None      
-  
+        return None
+
 ################################
-# Get <Access Token> from Refresh 
+# Get <Access Token> from Refresh
 #  token.
 ################################
 def getnewaccesstoken(refreshtoken,dlpfsmurl,valid_certificate):
+    '''Get <Access Token> from Refresh token.'''
     #data = {}
-    headerz = {"refresh-token" : "Bearer {}".format(refreshtoken) }
-    urlz = 'https://{}/dlp/rest/v1/auth/access-token'.format(dlpfsmurl)
-    r={}
+    #headerz = {"refresh-token" : "Bearer {}".format(refreshtoken) }
+    headerz = {"refresh-token" : f"Bearer {refreshtoken}" }
+    #urlz = 'https://{}/dlp/rest/v1/auth/access-token'.format(dlpfsmurl)
+    urlz = f'https://{dlpfsmurl}/dlp/rest/v1/auth/access-token'
+    request={}
     try:
-        r = requests.post(urlz,headers=headerz,verify=valid_certificate)
-        response = json.loads(r.text)
-        print('New Access token={}..xxxx'.format((response["access_token"])[-10:]))
-    except Exception as err:
+        request = requests.post(urlz,headers=headerz,verify=valid_certificate)
+        response = json.loads(request.text)
+#        print('New Access token={}..xxxx'.format((response["access_token"])[-10:]))
+        print(f'New Access token={(response["access_token"])[-10:]}..xxxx')
+    except requests.exceptions.RequestException as err:
         print (err)
-        exit
- 
-    if r.status_code == 200:
+        sys.exit()
+
+    if request.status_code == 200:
         return response["access_token"]
-    else:
-        return None   
-  
+    return None
+
 ################################
 # Get incidents by access 
 #  token and ranges
 ################################   
 def retrieve_incidents(accesstoken,dlpfsmurl):
-    
+    '''Get incidents by access token and ranges'''
     data = {}
     responsecode = 200
     headerz = {"Authorization" : "Bearer {}".format(accesstoken) , "Content-Type": "application/json"}
     urlz = 'https://{}/dlp/rest/v1/incidents'.format(dlpfsmurl)
     ##TBD make dynamic incidents with range taken from file.
-    data = '{ "sort_by" : "INSERT_DATE", "type" : "INCIDENTS", "from_date" : "01/01/2022 00:00:00", "to_date" : "04/01/2022 23:59:59" }' 
+    data = '{ "sort_by" : "INSERT_DATE", "type" : "INCIDENTS", "from_date" : "01/01/2022 00:00:00", "to_date" : "04/01/2022 23:59:59" }'
     r={}
-    try:     
+    try:
         r = requests.post(urlz, headers=headerz, data=data, verify=False)
         response = json.loads(r.text)
         if r.ok : 
@@ -119,9 +127,9 @@ def retrieve_incidents(accesstoken,dlpfsmurl):
             responsecode = r.status_code
 
         return response, responsecode
-    except Exception as err:
+    except requests.exceptions.RequestException as err:
         print (err)
-        exit
+        sys.exit()
 
 ######################################
 # retrieve incidents by time frame
@@ -140,7 +148,7 @@ def retrieve_incidents_for_tf(accesstoken,dlpfsmurl, start_tf, end_tf,valid_cert
         r = requests.post(urlz, headers=headerz, data=sdata, verify=valid_certificate)
     except Exception as err:
         print (err)
-        exit
+        sys.exit()
 
     if r.ok : 
         response = json.loads(r.text)
@@ -182,12 +190,9 @@ def update_incident(accesstoken,dlpfsmurl, incident_id, partition_id, new_type, 
         r = requests.post(urlz, headers=headerz, data=sdata, verify=valid_certificate)
     except Exception as err:
         print (err)
-        exit
+        sys.exit()
 
     return r.status_code
-
-
-
 
 ################################
 # #TBD chck the access token from the previous response
@@ -231,19 +236,19 @@ def get_time_frame_for_next_request(timestamp, seconds):
     # convert timestamp to string in dd-mm-yyyy HH:MM:SS
     start_tf = start_tfx.strftime("%d/%m/%Y %H:%M:%S")
     end_tf = end_tfx.strftime("%d/%m/%Y %H:%M:%S")
-
     return start_tf, end_tf 
 
-
 ################################
-#   Main Flow 
+#   Main Flow
 ###############################
 
 def main():
-        
     #####################
     #  Global Variables
     #####################
+
+    POLLING_INTERVAL_MINUTES = 1 #Not suitable for production
+
     username  = ''
     password  =  ''
     dlpfsmurl = ''
@@ -253,36 +258,39 @@ def main():
     valid_certificate = False
     logged_incident_type = 'INCIDENTS'
     configfile = 'restapi.conf'
-    # polling interval of 1 minute is for debugging/demo only. 
+    # polling interval of 1 minute is for debugging/demo only.
     # for production environment please set 5 or 10m ( 5 * 60 )
-    polling_interval = 1 * 60 # seconds
-    
+    polling_interval = POLLING_INTERVAL_MINUTES * 60 # seconds
+
     logging.basicConfig(
      filename='DLPAPI.log',
-     level=logging.INFO, 
+     level=logging.INFO,
      format= '[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
      datefmt='%H:%M:%S' )
-    
+
     logger = logging.getLogger(__name__)
     #Testing our Logger
     logger.info("DLP RestAPI started")
 
     logger.info("Read Config file")
-    username, password, dlpfsmurl,incidents_results_full_path, valid_certificate, logged_incident_type, servicenow_enabled, servicenow_instance, servicenow_user, servicenow_password, servicenow_create_incident_from = read_config(configfile)
+    username, password, dlpfsmurl,incidents_results_full_path, valid_certificate, \
+    logged_incident_type, servicenow_enabled, servicenow_instance, servicenow_user, \
+    servicenow_password, servicenow_create_incident_from = read_config(configfile)
+
     if ( (username) and (password) and (dlpfsmurl) and (incidents_results_full_path)):
         logger.info("Config file ok")
-    else :
+    else:
         logger.error("Bad Config file")
-        exit
-        
-    # get initial token 
+        sys.exit()
+
+    # get initial token
     refreshtoken = getrefreshtoken(username,password,dlpfsmurl,valid_certificate)
     if (refreshtoken is not None):
         logger.info("Auth token retrieved")
-    else :
+    else:
         logger.error("Bad authentication. please check your config file and try again.")
-        exit
-          
+        print("Bad authentication. please check your config file and try again.")
+        sys.exit()
 
     # get access token
     accesstoken = getnewaccesstoken(refreshtoken,dlpfsmurl,valid_certificate)
@@ -310,7 +318,8 @@ def main():
                     logger.info('ServiceNow API returned status: {}'.format(push_status))
         else:
             accesstoken = getnewaccesstoken(refreshtoken,dlpfsmurl,valid_certificate)
-            if (accesstoken) : accesstokenvalid = True
+            if (accesstoken):
+                accesstokenvalid = True
 
         # TBD calculate the next interation before continueing to retrive.
         now = datetime.now() # current date and time
@@ -321,8 +330,8 @@ def main():
 #TBD retrive discovery incidents
 
 ################################
-# Main call 
-#  Eran Amir 2021 (c) 
+# Main call
+#  Eran Amir 2021 (c)
 ################################
 if __name__ == "__main__":
     main()

@@ -22,6 +22,10 @@ python incident_update.py  -i 1734266 -p 20211011 -t INCIDENTS -a STATUS -v CLOS
 
 python incident_update.py -i 1932312 -p 20220110 -t INCIDENTS -a SEVERITY -v LOW
 
+ServiceNow Intergration: 
+========================
+The configuration files can enable pushing incidents into servicenow incident table via the REST API.
+
 
 Troubleshooting:
 ================

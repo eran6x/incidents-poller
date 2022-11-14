@@ -1,0 +1,49 @@
+(function executeRule(current, previous /*null when async*/) {
+	var username = 'erana';
+	var password = 'Forcepoint1!';
+	
+	// get auth token
+	var request = new sn_ws.RESTMessageV2();
+	request.setEndpoint('https://evelin.stalzer.lab.go4labs.net:9443/dlp/rest/v1/auth/refresh-token');
+	request.setHttpMethod('POST');
+	request.setBasicAuth(username,password);
+	request.setRequestHeader("Accept","application/json");
+
+	var response = request.execute();
+	var requestBody = request.getRequestBody();
+	var responseBody = response.getBody();
+	var httpStatus = response.getStatusCode();
+	gs.log(responseBody);
+	
+	responseJOSN=responseBody.substring(10,responseBoday.length-1);
+	parsedJSON=JSON.parse(responseJSON);
+	
+	var atoken=parsedJSON['access_token'];
+	
+	var logString = 'RefreshToken is'+atoken;
+	gs.log(logString);
+
+	
+	// next, get the following parameters for setting incident data:
+	var partition_index = 'partition_index';
+	var incident_id = '';
+	//INCIDENTS
+	var incident_status='ESCALATED';
+	
+	
+	var request2 = new sn_ws.RESTMessageV2();
+			request2.setEndpoint('https://evelin.stalzer.lab.go4labs.net:9443/dlp/rest/v1/incidents/update');
+	request2.setHttpMethod('POST');
+	request2.setAuthenticationProfile('oath2',atoken);
+	request2.setRequestHeader("Accept","application/json");
+
+	var response2 = request2.execute();
+	var requestBody2 = request2.getRequestBody();
+	var responseBody2 = response2.getBody();
+	var httpStatus2 = response2.getStatusCode();
+	gs.log(responseBody2);
+	
+	
+	
+	
+})(current, previous);

@@ -4,19 +4,19 @@
 # Notes: 
 # username/password - FSM API user credentials.
 # hostname can be appended with port number <host>:<port>
-# location must point to existing folder with a slash at the end.
+# Location must point to existing folder with a tailing slash at the end ('\' or '\').
 # if you use self-signed cert for FSM then verifycert=False
 # start_date- Currently disabled feature. (retrive incidents from current time onwards)
 # servicenow_enabled - will forward events to servicenow if True.
 # servicenow_create_incident_from - Filtering mechanism for sending events.
 # FSM events severity is: LOW, MEDIUM, HIGH, CRITICAL. If value set to either, incidents will be created for this severity and higher.
-#
-#
+# this version ignores the start date. (retrive incidents from current time)
+# obfuscate user data convert the exported user name and email to Base64 value. 
 #########################################
 username=serviceaccount
 password=MYpassword!
 hostname=hostlab.go4labs.net
-location=/Users/eran/Documents/projects/restAPI/results
+location=/Users/eran/Documents/projects/restAPI/results/
 incident_type=INCIDENTS
 verifycert=False
 #start_date=01/01/2022
@@ -25,3 +25,4 @@ servicenow_instance=dev00000
 servicenow_user=serviceaccount
 servicenow_password=MyP@ssw0rd!
 servicenow_create_incident_from=MEDIUM
+obfuscase_user_data=False
