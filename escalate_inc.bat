@@ -1,4 +1,6 @@
 @echo off
+REM  Parameter1 = incident ID
+REM  Parameter2 = Partition ID
 
 IF %1.==. GOTO No1
 IF %2.==. GOTO No2
