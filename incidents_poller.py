@@ -4,6 +4,8 @@ import pprint
 import time
 from datetime import datetime
 import sys
+import random
+from string import ascii_letters
 import requests
 import servicenow_incident
 
@@ -12,7 +14,7 @@ __author__ = 'Eran Amir 2022'
 ################################
 # This script retrives incidents from launch time onwards in continuous loop.
 # Edit the configuration file "restapi.conf" Before running the script
-# v 0.3
+# v 0.4
 
 ################################
 # Read config From file
@@ -42,6 +44,8 @@ def read_config(configfile):
             logged_incident_type = line1 #must be INCIDENTS or DISCOVERY
         elif line0.lower() in ['verifycert', 'Verifycert']:
             valid_certificate = True if (line1.lower() == 'true') else False
+        elif line0.lower() in ['obfuscase_user_data', 'Obfuscase_user_data']:
+            obfuscate = True if (line1.lower() == 'true') else False
         elif line0.lower() in ['servicenow_enabled', 'Servicenow_enabled']:
             servicenow_enabled = True if (line1.lower() == 'true') else False
         elif line0.lower() in ['servicenow_instance', 'Servicenow_instance']:
@@ -56,8 +60,17 @@ def read_config(configfile):
         else:
             pass
     return username, password, dlpfsmurl, incidents_results_full_path,valid_certificate, \
-           logged_incident_type, servicenow_enabled, servicenow_instance, servicenow_user, \
+           logged_incident_type, obfuscate, servicenow_enabled, servicenow_instance, servicenow_user, \
            servicenow_password, servicenow_create_incident_from
+
+
+def obfuscate_line(length):
+    ''' return obfuscated string in specified legnth '''
+    obf = ''
+    for _ in range(length):
+        obf = obf + random.choice(ascii_letters)
+    return obf
+
 
 ################################
 # Get a <Refresh Token> from
@@ -208,7 +221,7 @@ def check_validity_at(response):
 # Write incidents as files  
 #  in results folder
 ################################
-def writetofile(incidents_bulk,incidents_results_full_path):
+def writetofile(incidents_bulk,incidents_results_full_path, obfuscate):
     now = datetime.now() # current date and time
     date_time = now.strftime("_%m-%d-%Y-%H-%M-%S")
 
@@ -218,9 +231,14 @@ def writetofile(incidents_bulk,incidents_results_full_path):
 
     file=open(filename, mode="wt", encoding='utf-8')
     for items in incident_list:
-        output_s = pprint.pformat(items) 
+        # obfuscate sensitive data:
+        if obfuscate:
+            items['source']['login_name'] = obfuscate_line(len(items['source']['login_name']))
+            items['source']['host_name'] = obfuscate_line(len(items['source']['host_name']))
+    
+        output_s = pprint.pformat(items)
         output_s = output_s.replace("\n", " ")
-        output_s += '\n'      
+        output_s += '\n'
         file.write(output_s)
     file.close()
     return str('completed writing {} incidents to {}'.format(len(incident_list),filename))
@@ -247,7 +265,7 @@ def main():
     #  Global Variables
     #####################
 
-    POLLING_INTERVAL_MINUTES = 1 #Not suitable for production
+    POLLING_INTERVAL_MINUTES = 5 #Not suitable for production
 
     username  = ''
     password  =  ''
@@ -274,7 +292,7 @@ def main():
 
     logger.info("Read Config file")
     username, password, dlpfsmurl,incidents_results_full_path, valid_certificate, \
-    logged_incident_type, servicenow_enabled, servicenow_instance, servicenow_user, \
+    logged_incident_type, obfuscate, servicenow_enabled, servicenow_instance, servicenow_user, \
     servicenow_password, servicenow_create_incident_from = read_config(configfile)
 
     if ( (username) and (password) and (dlpfsmurl) and (incidents_results_full_path)):
@@ -310,7 +328,7 @@ def main():
             accesstokenvalid = check_validity_at(responsecode)
             # incidents items clount
             if (accesstokenvalid and incidents_bulk['total_count'] > 0):
-                status =writetofile(incidents_bulk,incidents_results_full_path)
+                status =writetofile(incidents_bulk,incidents_results_full_path, obfuscate)
                 logger.info(status)
                 if (servicenow_enabled):
                     logger.info('Pushing {} incidents to Servicenow instance: {}'.format(servicenow_instance, len(incidents_bulk['incidents'])))
